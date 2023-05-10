@@ -5,11 +5,11 @@ endif
 # Default values if not already set
 CCP_BASEOS ?= ubi8
 BASE_IMAGE_OS ?= $(CCP_BASEOS)
-CCP_IMAGE_PREFIX ?= crunchydata
+CCP_IMAGE_PREFIX ?= highgo
 CCP_PGVERSION ?= 15
 CCP_PG_FULLVERSION ?= 15.2
-CCP_PATRONI_VERSION ?= 2.1.7
-CCP_BACKREST_VERSION ?= 2.41
+CCP_PATRONI_VERSION ?= 2.1.4
+CCP_BACKREST_VERSION ?= 2.43
 CCP_VERSION ?= 5.3.1
 CCP_POSTGIS_VERSION ?= 3.3
 CCP_POSTGIS_FULL_VERSION ?= 3.3.2
@@ -23,7 +23,7 @@ PACKAGER ?= yum
 IMGBUILDER ?= buildah
 # Determines whether or not images should be pushed to the local docker daemon when building with
 # a tool other than docker (e.g. when building with buildah)
-IMG_PUSH_TO_DOCKER_DAEMON ?= true
+IMG_PUSH_TO_DOCKER_DAEMON ?= true 
 # The utility to use when pushing/pulling to and from an image repo (e.g. docker or buildah)
 IMG_PUSHER_PULLER ?= docker
 # Defines the sudo command that should be prepended to various build commands when rootless builds are
@@ -50,6 +50,12 @@ ifeq ("$(CCP_BASEOS)", "ubi8")
         DFSET=rhel
         PACKAGER=microdnf
         BASE_IMAGE_OS=ubi8-minimal
+endif
+
+ifeq ("$(CCP_BASEOS)", "centos7")
+        DFSET=centos
+        PACKAGER=dnf
+        DOCKERBASEREGISTRY=docker.io/centos:
 endif
 
 ifeq ("$(CCP_BASEOS)", "centos8")
@@ -106,8 +112,9 @@ ccbase-image: ccbase-image-$(IMGBUILDER)
 
 ccbase-image-build: build-pgbackrest license $(CCPROOT)/build/base/Dockerfile
 	$(IMGCMDSTEM) \
+		--network=host \
 		-f $(CCPROOT)/build/base/Dockerfile \
-		-t $(CCP_IMAGE_PREFIX)/crunchy-base:$(CCP_IMAGE_TAG) \
+		-t highgo-base:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg RELVER=$(CCP_VERSION) \
 		--build-arg DFSET=$(DFSET) \
@@ -147,20 +154,21 @@ ccbase-ext-image-docker: ccbase-ext-image-build
 
 # ----- Special case pg-based image (postgres) -----
 # Special case args: BACKREST_VER
-postgres-pgimg-build: ccbase-image $(CCPROOT)/build/postgres/Dockerfile
+postgres-pgimg-build: ccbase-image $(CCPROOT)/build/ivory/Dockerfile
 	$(IMGCMDSTEM) \
-		-f $(CCPROOT)/build/postgres/Dockerfile \
-		-t $(CCP_IMAGE_PREFIX)/crunchy-postgres:$(CCP_IMAGE_TAG) \
+		-f $(CCPROOT)/build/ivory/Dockerfile \
+		-t $(CCP_IMAGE_PREFIX)/highgo-ivory:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg BASEVER=$(CCP_VERSION) \
 		--build-arg PG_FULL=$(CCP_PG_FULLVERSION) \
 		--build-arg PG_LBL=${subst .,,$(CCP_PGVERSION)} \
 		--build-arg PG_MAJOR=$(CCP_PGVERSION) \
+		--build-arg IVY_MAJOR=$(CCP_IVYVERSION) \
 		--build-arg PREFIX=$(CCP_IMAGE_PREFIX) \
 		--build-arg BACKREST_VER=$(CCP_BACKREST_VERSION) \
 		--build-arg DFSET=$(DFSET) \
 		--build-arg PACKAGER=$(PACKAGER) \
-		--build-arg BASE_IMAGE_NAME=crunchy-base \
+		--build-arg BASE_IMAGE_NAME=highgo-base \
 		--build-arg PATRONI_VER=$(CCP_PATRONI_VERSION) \
 		$(CCPROOT)
 
@@ -232,7 +240,7 @@ build-pgbackrest:
 pgbackrest-pgimg-build: ccbase-image build-pgbackrest $(CCPROOT)/build/pgbackrest/Dockerfile
 	$(IMGCMDSTEM) \
 		-f $(CCPROOT)/build/pgbackrest/Dockerfile \
-		-t $(CCP_IMAGE_PREFIX)/crunchy-pgbackrest:$(CCP_IMAGE_TAG) \
+		-t $(CCP_IMAGE_PREFIX)/highgo-pgbackrest:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg BASEVER=$(CCP_VERSION) \
 		--build-arg PG_FULL=$(CCP_PG_FULLVERSION) \

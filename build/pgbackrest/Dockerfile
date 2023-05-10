@@ -2,12 +2,15 @@ ARG BASEOS
 ARG BASEVER
 ARG PG_FULL
 ARG PREFIX
-FROM ${PREFIX}/crunchy-base:${BASEOS}-${PG_FULL}-${BASEVER}
+FROM highgo-base:${BASEOS}-${PG_FULL}-${BASEVER}
 
 # For RHEL8 all arguments used in main code has to be specified after FROM
 ARG PACKAGER
 ARG BACKREST_VER
 ARG BASEOS
+
+RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
+ && ${PACKAGER} -y clean all
 
 LABEL name="pgbackrest" \
 	summary="Crunchy pgBackRest ${BACKREST_VER}" \
@@ -34,13 +37,13 @@ else \
 		openssh-server \
 		bzip2 \
 		lz4 \
-		crunchy-backrest-${BACKREST_VER} \
+		pgbackrest \
 		&& ${PACKAGER} -y clean all ; \
 fi
 
 
 # add postgres user and group
-RUN groupadd postgres -g 26 && useradd postgres -u 26 -g 26
+#RUN groupadd postgres -g 26 && useradd postgres -u 26 -g 26
 
 # set up crunchy directory
 RUN mkdir -p /opt/crunchy/bin /opt/crunchy/conf /pgdata /backrestrepo \
@@ -87,7 +90,7 @@ RUN rm -rf /var/spool/pgbackrest
 # volume permissions are applied when building the image
 VOLUME ["/sshd", "/pgdata", "/backrestrepo"]
 
-USER 26
+USER 988
 
 # Defines a unique directory name that will be utilized by the nss_wrapper in the UID script
 ENV NSS_WRAPPER_SUBDIR="pgbackrest"
