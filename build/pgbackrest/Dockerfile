@@ -41,9 +41,9 @@ else \
 		&& ${PACKAGER} -y clean all ; \
 fi
 
-
-# add postgres user and group
-#RUN groupadd postgres -g 26 && useradd postgres -u 26 -g 26
+RUN cat /dev/null > /etc/pgbackrest.conf
+# add ivorysql user and group
+RUN groupadd ivorysql -g 995 && useradd ivorysql -u 998 -g 995
 
 # set up crunchy directory
 RUN mkdir -p /opt/crunchy/bin /opt/crunchy/conf /pgdata /backrestrepo \
@@ -61,7 +61,7 @@ ADD bin/common /opt/crunchy/bin
 ADD bin/pgbackrest-common /opt/crunchy/bin
 
 # set user and group ownership
-RUN chown -R postgres:postgres /opt/crunchy  \
+RUN chown -R ivorysql:ivorysql /opt/crunchy  \
 	/backrestrepo /var/log/pgbackrest /pgdata
 
 # add the pgbackrest-repo specific files and directories, and
@@ -70,12 +70,12 @@ ADD bin/pgbackrest-repo /usr/local/bin
 RUN chmod +x /usr/local/bin/pgbackrest-repo.sh /usr/local/bin/archive-push-s3.sh \
 		/usr/local/bin/archive-push-gcs.sh \
 	&& mkdir -p /etc/pgbackrest \
-	&& chown -R postgres:postgres /etc/pgbackrest
+	&& chown -R ivorysql:ivorysql /etc/pgbackrest
 
 RUN chmod -R g=u /etc/pgbackrest \
 	&& rm -f /run/nologin
 
-RUN mkdir /.ssh && chown postgres:postgres /.ssh && chmod o+rwx /.ssh
+RUN mkdir /.ssh && chown ivorysql:ivorysql /.ssh && chmod o+rwx /.ssh
 
 # remove the default spool directory so that pgBackRest does not attempt to look there when
 # performing a restore (pgBackRest will not have permissions to access to this dir in all envs)
@@ -90,7 +90,7 @@ RUN rm -rf /var/spool/pgbackrest
 # volume permissions are applied when building the image
 VOLUME ["/sshd", "/pgdata", "/backrestrepo"]
 
-USER 988
+USER 998
 
 # Defines a unique directory name that will be utilized by the nss_wrapper in the UID script
 ENV NSS_WRAPPER_SUBDIR="pgbackrest"

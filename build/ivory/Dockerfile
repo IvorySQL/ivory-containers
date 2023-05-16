@@ -18,11 +18,12 @@ ARG IVY_MAJOR
 # Needed due to lack of environment substitution trick on ADD
 ARG PG_LBL
 
-RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
- && ${PACKAGER} -y clean all
+RUN ${PACKAGER} -y update epel-release \
+	&& ${PACKAGER} -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
+	&& ${PACKAGER} -y clean all
 
 # Preserving PGVERSION out of paranoia
-ENV PGROOT="/usr/pgsql-${PG_MAJOR}" PGVERSION="${PG_MAJOR}" IVYROOT="/usr/local/ivorysql/ivorysql-${PG_MAJOR}" PGVERSION="${IVY_MAJOR}" 
+ENV PGROOT="/usr/pgsql-${PG_MAJOR}" PGVERSION="${PG_MAJOR}" IVYROOT="/usr/local/ivorysql/ivorysql-${IVY_MAJOR}" IVYVERSION="${IVY_MAJOR}" 
 
 ARG PATRONI_VER
 ARG BACKREST_VER
@@ -33,14 +34,16 @@ RUN if [ "$DFSET" = "centos" ] ; then \
         	--setopt=skip_missing_names_on_install=False \
         	openssh-clients \
         	openssh-server \
-#        	pgaudit${PG_MAJOR//.} \
-#        	pgaudit${PG_MAJOR//.}_set_user \
+#        	pgaudit17_15 \
+	       	set_user_15 \
         	pg_partman_${PG_MAJOR//.} \
         	pg_cron_${PG_MAJOR//.} \
+		pgbackrest \
 #        	crunchy-backrest-${BACKREST_VER} \
 #        	postgresql${PG_MAJOR//.}-contrib \
 #        	postgresql${PG_MAJOR//.}-server \
 #        	postgresql${PG_MAJOR//.}-plpython* \
+                ivorysql2-devel \
                 ivorysql2-contrib \
                 ivorysql2-server \
                 ivorysql2-plpython* \
@@ -57,7 +60,7 @@ RUN if [ "$DFSET" = "centos" ] ; then \
         	gettext \
         	hostname \
         	procps-ng \
-#        	pgaudit_analyze \
+        	pgaudit_analyze \
         	unzip \
         	bzip2 \
         	lz4 \
@@ -105,18 +108,30 @@ else \
 	&& ${PACKAGER} -y clean all --enablerepo="epel" ; \
 fi
 
+RUN cat /dev/null > /etc/pgbackrest.conf
+
+# insatll pgaudit
+RUN  ${PACKAGER} -y install \
+	redhat-rpm-config \
+	openssl-devel \
+	make \
+	&& ${PACKAGER} -y clean all
+ADD rpms/pgaudit-1.7.0.tar.gz /
+RUN cd pgaudit-1.7.0 \
+	&& make install USE_PGXS=1 PG_CONFIG=$IVYROOT/bin/pg_config
+
 # install patroni for Kube
 RUN pip3 install --upgrade python-dateutil \
 	&& pip3 install patroni[kubernetes]=="${PATRONI_VER}" -i https://pypi.douban.com/simple/
 
-ENV PATH="${PGROOT}/bin:${IVYROOT}/bin:${PATH}"
+ENV PATH="${IVYROOT}/bin:${PATH}"
 
-LABEL name="postgres" \
-	summary="Crunchy PostgreSQL ${PG_FULL}" \
-	description="Postgres ready for production: high availability, disaster recovery, monitoring, security, and performance. Works with PGO, the open source Postgres Operator from Crunchy Data." \
-	io.k8s.description="Crunchy PostgreSQL is ready for production: the trusted open source distribution of PostgreSQL. Works with PGO, the open source Postgres Operator from Crunchy Data." \
-	io.k8s.display-name="Crunchy PostgreSQL" \
-	io.openshift.tags="postgresql,postgres,postgis,sql,nosql,database,ha,crunchy" \
+LABEL name="ivory" \
+	summary="Highgo IvorySQL" \
+	description="Ivory ready for production: high availability, disaster recovery, monitoring, security, and performance. Works with IVYO, the open source Ivory Operator from Highgo." \
+	io.k8s.description="Highgo IvorySQL is ready for production: the trusted open source distribution of PostgreSQL. Works with IVYO, the open source Ivory Operator from Highgo." \
+	io.k8s.display-name="Highgo IvorySQL" \
+	io.openshift.tags="ivorysql,postgresql,postgres,postgis,sql,nosql,database,ha,highgo" \
 	postgresql.version.major="${PG_MAJOR}" \
 	postgresql.version="${PG_FULL}"
 
@@ -137,7 +152,7 @@ ADD conf/postgres_common /opt/crunchy/conf
 ADD tools/pgmonitor/postgres_exporter/common /opt/crunchy/bin/modules/pgexporter
 ADD tools/pgmonitor/postgres_exporter/linux /opt/crunchy/bin/modules/pgexporter
 
-RUN mkdir /.ssh && chown 988:0 /.ssh && chmod g+rwx /.ssh && rm -f /run/nologin
+RUN mkdir /.ssh && chown 998:0 /.ssh && chmod g+rwx /.ssh && rm -f /run/nologin
 
 # remove the default spool directory so that pgBackRest does not attempt to look there when
 # performing a restore (pgBackRest will not have permissions to access to this dir in all envs)
@@ -157,5 +172,6 @@ ENV NSS_WRAPPER_SUBDIR="ivorysql"
 ENTRYPOINT ["/opt/crunchy/bin/uid_postgres.sh"]
 
 USER 998
+#USER 0
 
 CMD ["/opt/crunchy/bin/start.sh"]
