@@ -13,7 +13,7 @@ CCP_BACKREST_VERSION ?= 2.43
 CCP_VERSION ?= 5.3.1
 CCP_POSTGIS_VERSION ?= 3.3
 CCP_POSTGIS_FULL_VERSION ?= 3.3.2
-CCP_PGADMIN_VERSION ?= 4.30
+CCP_PGADMIN_VERSION ?= 7.4
 CCP_PGBOUNCER_VERSION ?= 1.18.0
 CCP_IMAGE_TAG ?= $(CCP_BASEOS)-$(CCP_PG_FULLVERSION)-$(CCP_VERSION)
 CCP_POSTGIS_IMAGE_TAG ?= $(CCP_BASEOS)-$(CCP_PG_FULLVERSION)-$(CCP_POSTGIS_VERSION)-$(CCP_VERSION)
@@ -287,8 +287,9 @@ upgrade-img-docker: upgrade-img-build
 # Special case args: CCP_PGADMIN_VERSION
 pgadmin4-img-build: ccbase-image $(CCPROOT)/build/pgadmin4/Dockerfile
 	$(IMGCMDSTEM) \
+		--network=host \
 		-f $(CCPROOT)/build/pgadmin4/Dockerfile \
-		-t $(CCP_IMAGE_PREFIX)/crunchy-pgadmin4:$(CCP_IMAGE_TAG) \
+		-t $(CCP_IMAGE_PREFIX)/highgo-pgadmin4:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg BASEVER=$(CCP_VERSION) \
 		--build-arg PG_FULL=$(CCP_PG_FULLVERSION) \
@@ -296,15 +297,16 @@ pgadmin4-img-build: ccbase-image $(CCPROOT)/build/pgadmin4/Dockerfile
 		--build-arg PREFIX=$(CCP_IMAGE_PREFIX) \
 		--build-arg PGADMIN_VER=$(CCP_PGADMIN_VERSION) \
 		--build-arg PACKAGER=$(PACKAGER) \
+                --build-arg IVY_MAJOR=$(CCP_IVYVERSION) \
 		$(CCPROOT)
 
-pgadmin4-img-buildah: pgadmin4-img-build ;
+pgadmin-img-buildah: pgadmin4-img-build ;
 # only push to docker daemon if variable IMG_PUSH_TO_DOCKER_DAEMON is set to "true"
 ifeq ("$(IMG_PUSH_TO_DOCKER_DAEMON)", "true")
 	sudo --preserve-env buildah push $(CCP_IMAGE_PREFIX)/crunchy-pgadmin4:$(CCP_IMAGE_TAG) docker-daemon:$(CCP_IMAGE_PREFIX)/crunchy-pgadmin4:$(CCP_IMAGE_TAG)
 endif
 
-pgadmin4-img-docker: pgadmin-img-build
+pgadmin-img-docker: pgadmin-img-build
 
 # Special case args: CCP_PGBOUNCER_VERSION
 pgbouncer-img-build: ccbase-image $(CCPROOT)/build/pgbouncer/Dockerfile
