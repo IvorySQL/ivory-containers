@@ -156,6 +156,7 @@ ccbase-ext-image-docker: ccbase-ext-image-build
 # Special case args: BACKREST_VER
 postgres-pgimg-build: ccbase-image $(CCPROOT)/build/ivory/Dockerfile
 	$(IMGCMDSTEM) \
+		--network=host \
 		-f $(CCPROOT)/build/ivory/Dockerfile \
 		-t $(CCP_IMAGE_PREFIX)/highgo-ivory:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \

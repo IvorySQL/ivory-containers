@@ -20,7 +20,8 @@ ARG PG_LBL
 
 RUN ${PACKAGER} -y update epel-release \
 	&& ${PACKAGER} -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
-	&& ${PACKAGER} -y clean all
+#	&& ${PACKAGER} -y clean all
+	&& ${PACKAGER} -y makecache
 
 # Preserving PGVERSION out of paranoia
 ENV PGROOT="/usr/pgsql-${PG_MAJOR}" PGVERSION="${PG_MAJOR}" IVYROOT="/usr/local/ivorysql/ivorysql-${IVY_MAJOR}" IVYVERSION="${IVY_MAJOR}" 
@@ -35,10 +36,11 @@ RUN if [ "$DFSET" = "centos" ] ; then \
         	openssh-clients \
         	openssh-server \
 #        	pgaudit17_15 \
-	       	set_user_15 \
-        	pg_partman_${PG_MAJOR//.} \
-        	pg_cron_${PG_MAJOR//.} \
-		pgbackrest \
+#	       	set_user_15 \
+#        	pg_partman_${PG_MAJOR//.} \
+#        	pg_cron_${PG_MAJOR//.} \
+#		pgbackrest \
+		pgbackrest-2.45 \
 #        	crunchy-backrest-${BACKREST_VER} \
 #        	postgresql${PG_MAJOR//.}-contrib \
 #        	postgresql${PG_MAJOR//.}-server \
@@ -54,7 +56,7 @@ RUN if [ "$DFSET" = "centos" ] ; then \
         	python3-psutil \
         	python3-psycopg2 \
         	rsync \
-        	timescaledb_${PG_MAJOR//.} \
+ #       	timescaledb_${PG_MAJOR//.} \
         	wal2json_${PG_MAJOR//.} \
         	file \
         	gettext \
@@ -65,7 +67,7 @@ RUN if [ "$DFSET" = "centos" ] ; then \
         	bzip2 \
         	lz4 \
 			krb5-workstation \
-			orafce_${PG_MAJOR//.} \
+#			orafce_${PG_MAJOR//.} \
 #			passwordpolicy \
         && ${PACKAGER} -y clean all ; \
 else \
@@ -99,7 +101,7 @@ else \
 		bzip2 \
 		lz4 \
 		krb5-workstation \
-		orafce_${PG_MAJOR//.} \
+#		orafce_${PG_MAJOR//.} \
 		passwordpolicy \
 	&& ${PACKAGER} -y install --nodocs \
 		--setopt=tsflags='' \
@@ -110,15 +112,24 @@ fi
 
 RUN cat /dev/null > /etc/pgbackrest.conf
 
-# insatll pgaudit
 RUN  ${PACKAGER} -y install \
 	redhat-rpm-config \
 	openssl-devel \
 	make \
 	&& ${PACKAGER} -y clean all
+# insatll pgaudit
 ADD rpms/pgaudit-1.7.0.tar.gz /
 RUN cd pgaudit-1.7.0 \
-	&& make install USE_PGXS=1 PG_CONFIG=$IVYROOT/bin/pg_config
+	&& make install USE_PGXS=1 PG_CONFIG=$IVYROOT/bin/pg_config \
+	&& rm -rf ../pgaudit-1.7.0
+# insatll pg_cron
+#RUN yum install -y pg_cron_15 --installroot=$IVYROOT  --releasever=8 --skip-broken
+ADD rpms/pg_cron-v1.5.2.tar.gz /
+RUN cd pg_cron-1.5.2 \
+	&& sed -i 's/-Wno-compound-token-split-by-macro //g' $IVYROOT/lib/pgxs/src/Makefile.global \
+        && make USE_PGXS=1 PG_CONFIG=$IVYROOT/bin/pg_config \
+        && make install USE_PGXS=1 PG_CONFIG=$IVYROOT/bin/pg_config \
+	&& rm -rf ../pg_cron-1.5.2
 
 # install patroni for Kube
 RUN pip3 install --upgrade python-dateutil \
