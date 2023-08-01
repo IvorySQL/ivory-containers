@@ -93,12 +93,14 @@ pgbackrest-images: pgbackrest
 #===========================================
 
 pgadmin4: pgadmin4-img-$(IMGBUILDER)
+pgexporter: pgexporter-img-$(IMGBUILDER)
 pgbackrest: pgbackrest-pgimg-$(IMGBUILDER)
 pgbadger: pgbadger-img-$(IMGBUILDER)
 pgbouncer: pgbouncer-img-$(IMGBUILDER)
 pgpool: pgpool-img-$(IMGBUILDER)
 postgres: postgres-pgimg-$(IMGBUILDER)
 postgres-gis: postgres-gis-pgimg-$(IMGBUILDER)
+pgexporter: pgexporter-img-$(IMGBUILDER)
 
 #===========================================
 # Pattern-based image generation targets
@@ -283,6 +285,19 @@ ifeq ("$(IMG_PUSH_TO_DOCKER_DAEMON)", "true")
 endif
 
 upgrade-img-docker: upgrade-img-build
+
+pgexporter-img-build: ccbase-image $(CCPROOT)/build/pgexporter/Dockerfile
+	$(IMGCMDSTEM) \
+		--network=host \
+		-f $(CCPROOT)/build/pgexporter/Dockerfile \
+		-t $(CCP_IMAGE_PREFIX)/highgo-pgexporter:$(CCP_IMAGE_TAG) \
+		--build-arg BASEOS=$(CCP_BASEOS) \
+		--build-arg BASEVER=$(CCP_VERSION) \
+		--build-arg PG_FULL=$(CCP_PG_FULLVERSION) \
+		--build-arg PG_MAJOR=$(CCP_PGVERSION) \
+		--build-arg PREFIX=$(CCP_IMAGE_PREFIX) \
+		--build-arg PGADMIN_VER=$(CCP_PGADMIN_VERSION) \
+		$(CCPROOT)
 
 # Special case args: CCP_PGADMIN_VERSION
 pgadmin4-img-build: ccbase-image $(CCPROOT)/build/pgadmin4/Dockerfile
