@@ -137,8 +137,9 @@ ccbase-image-docker: ccbase-image-build
 # ----- Base Image Ext -----
 ccbase-ext-image-build: ccbase-image $(CCPROOT)/build/base-ext/Dockerfile
 	$(IMGCMDSTEM) \
+                --network=host \
 		-f $(CCPROOT)/build/base-ext/Dockerfile \
-		-t $(CCP_IMAGE_PREFIX)/crunchy-base-ext:$(CCP_IMAGE_TAG) \
+		-t $(CCP_IMAGE_PREFIX)/highgo-base-ext:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg BASEVER=$(CCP_VERSION) \
 		--build-arg PACKAGER=$(PACKAGER) \
@@ -187,8 +188,9 @@ postgres-pgimg-docker: postgres-pgimg-build
 # Used as the base for the postgres-gis image.
 postgres-gis-base-pgimg-build: ccbase-ext-image-build $(CCPROOT)/build/postgres/Dockerfile
 	$(IMGCMDSTEM) \
-		-f $(CCPROOT)/build/postgres/Dockerfile \
-		-t $(CCP_IMAGE_PREFIX)/crunchy-postgres-gis-base:$(CCP_IMAGE_TAG) \
+		--network=host \
+		-f $(CCPROOT)/build/ivory/Dockerfile \
+		-t $(CCP_IMAGE_PREFIX)/highgo-postgres-gis-base:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg BASEVER=$(CCP_VERSION) \
 		--build-arg PG_FULL=$(CCP_PG_FULLVERSION) \
@@ -199,7 +201,8 @@ postgres-gis-base-pgimg-build: ccbase-ext-image-build $(CCPROOT)/build/postgres/
 		--build-arg DFSET=$(DFSET) \
 		--build-arg PACKAGER=$(PACKAGER) \
 		--build-arg PATRONI_VER=$(CCP_PATRONI_VERSION) \
-		--build-arg BASE_IMAGE_NAME=crunchy-base-ext \
+		--build-arg IVY_MAJOR=$(CCP_IVYVERSION) \
+		--build-arg BASE_IMAGE_NAME=highgo-base-ext \
 		$(CCPROOT)
 
 postgres-gis-base-pgimg-buildah: postgres-gis-base-pgimg-build ;
@@ -212,8 +215,9 @@ endif
 # Special case args: POSTGIS_LBL
 postgres-gis-pgimg-build: postgres-gis-base-pgimg-build $(CCPROOT)/build/postgres-gis/Dockerfile
 	$(IMGCMDSTEM) \
+		--network=host \
 		-f $(CCPROOT)/build/postgres-gis/Dockerfile \
-		-t $(CCP_IMAGE_PREFIX)/crunchy-postgres-gis:$(CCP_POSTGIS_IMAGE_TAG) \
+		-t $(CCP_IMAGE_PREFIX)/highgo-postgres-gis:$(CCP_POSTGIS_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg BASEVER=$(CCP_VERSION) \
 		--build-arg PG_FULL=$(CCP_PG_FULLVERSION) \

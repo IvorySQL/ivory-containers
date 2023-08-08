@@ -2,7 +2,7 @@ ARG BASEOS
 ARG BASEVER
 ARG PG_FULL
 ARG PREFIX
-FROM ${PREFIX}/crunchy-postgres-gis-base:${BASEOS}-${PG_FULL}-${BASEVER}
+FROM ${PREFIX}/highgo-postgres-gis-base:${BASEOS}-${PG_FULL}-${BASEVER} as step1
 
 # For RHEL8 all arguments used in main code has to be specified after FROM
 ARG BASEOS
@@ -13,51 +13,112 @@ ARG POSTGIS_LBL
 ARG POSTGIS_FULL_VER
 
 LABEL name="postgres-gis" \
-	summary="Includes PostGIS extensions on top of crunchy-postgres" \
-	description="An identical image of crunchy-postgres with the extra PostGIS packages added for users that require PostGIS." \
+	summary="Includes PostGIS extensions on top of highgo-ivory" \
+	description="An identical image of highgo-ivory with the extra PostGIS packages added for users that require PostGIS." \
 	io.k8s.description="postgres-gis container" \
-	io.k8s.display-name="Crunchy PostGIS" \
-	io.openshift.tags="postgresql,postgres,postgis,spatial,geospatial,gis,map,database,ha,crunchy"
+	io.k8s.display-name="Highgo PostGIS" \
+	io.openshift.tags="postgresql,postgres,postgis,spatial,geospatial,gis,map,database,ha,highgo,ivory,ivorysql"
 
 USER 0
 
-RUN if [ "$BASEOS" = "centos8" ] ; then \
-	${PACKAGER} -y install --nodocs \
-		--setopt=skip_missing_names_on_install=False \
-		--enablerepo="powertools" \
-		pgrouting${POSTGIS_LBL}_${PG_MAJOR//.} \
-		postgis${POSTGIS_LBL}_${PG_MAJOR//.}-${POSTGIS_FULL_VER} \
-		postgis${POSTGIS_LBL}_${PG_MAJOR//.}-client-${POSTGIS_FULL_VER} \
-		postgresql${PG_MAJOR//.}-plperl \
-		postgresql${PG_MAJOR//.}-pltcl \
-	&& ${PACKAGER} -y clean all ; \
-fi
-
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
-	${PACKAGER} -y install --nodocs \
-		--enablerepo="epel" \
-		--enablerepo="codeready-builder-for-rhel-8-x86_64-rpms" \
-		libaec libdap armadillo \
-	&& ${PACKAGER} -y install --nodocs \
-		--enablerepo="epel" \
-		--enablerepo="codeready-builder-for-rhel-8-x86_64-rpms" \
-		pgrouting${POSTGIS_LBL}_${PG_MAJOR//.} \
-		postgis${POSTGIS_LBL}_${PG_MAJOR//.}-${POSTGIS_FULL_VER} \
-		postgis${POSTGIS_LBL}_${PG_MAJOR//.}-client-${POSTGIS_FULL_VER} \
-		postgresql${PG_MAJOR//.}-plperl \
-		postgresql${PG_MAJOR//.}-pltcl \
-	&& ${PACKAGER} -y clean all \
-		--enablerepo="epel" \
-		--enablerepo="codeready-builder-for-rhel-8-x86_64-rpms" ; \
-fi
+#RUN if [ "$BASEOS" = "centos8" ] ; then \
+#	${PACKAGER} -y install --nodocs \
+#		--setopt=skip_missing_names_on_install=False \
+#		--enablerepo="powertools" \
+#		pgrouting${POSTGIS_LBL}_${PG_MAJOR//.} \
+#		postgis${POSTGIS_LBL}_${PG_MAJOR//.}-${POSTGIS_FULL_VER} \
+#		postgis${POSTGIS_LBL}_${PG_MAJOR//.}-client-${POSTGIS_FULL_VER} \
+#		postgresql${PG_MAJOR//.}-plperl \
+#		postgresql${PG_MAJOR//.}-pltcl \
+#	&& ${PACKAGER} -y clean all ; \
+#fi
+#
+#RUN if [ "$BASEOS" = "ubi8" ] ; then \
+#	${PACKAGER} -y install --nodocs \
+#		--enablerepo="epel" \
+#		--enablerepo="codeready-builder-for-rhel-8-x86_64-rpms" \
+#		libaec libdap armadillo \
+#	&& ${PACKAGER} -y install --nodocs \
+#		--enablerepo="epel" \
+#		--enablerepo="codeready-builder-for-rhel-8-x86_64-rpms" \
+#		pgrouting${POSTGIS_LBL}_${PG_MAJOR//.} \
+#		postgis${POSTGIS_LBL}_${PG_MAJOR//.}-${POSTGIS_FULL_VER} \
+#		postgis${POSTGIS_LBL}_${PG_MAJOR//.}-client-${POSTGIS_FULL_VER} \
+#		postgresql${PG_MAJOR//.}-plperl \
+#		postgresql${PG_MAJOR//.}-pltcl \
+#	&& ${PACKAGER} -y clean all \
+#		--enablerepo="epel" \
+#		--enablerepo="codeready-builder-for-rhel-8-x86_64-rpms" ; \
+#fi
 
 # open up the postgres port
-EXPOSE 5432
+
+#build postgis from source
+#1.install proj
+ADD build/postgres-gis/sqlite-autoconf-3400000.tar.gz build/postgres-gis/proj-8.2.1.tar.gz /
+RUN cd sqlite-autoconf-3400000 \
+	&& sed '1i\#define SQLITE_ENABLE_COLUMN_METADATA 1' sqlite3.c \
+	&& ./configure --prefix=/usr/local/sqlite \
+	&& make \
+	&& make install \
+	&& ln -s /usr/local/sqlite/bin/sqlite3   /usr/bin/sqlite3 \
+	&& sqlite3 -version
+ENV PKG_CONFIG_PATH=/usr/local/sqlite/lib/pkgconfig:$PKG_CONFIG_PATH
+RUN ${PACKAGER} install -y libtiff libtiff-devel.x86_64 libcurl-devel.x86_64
+RUN cd proj-8.2.1 \
+	&& ./configure --prefix=/usr/local/proj-8.2.1 \
+	&& make \
+	&& make install
+#2.install gdal
+RUN ${PACKAGER} install -y automake
+ADD build/postgres-gis/gdal-3.4.3.tar.gz /
+RUN cd /gdal-3.4.3 \
+	&& sh autogen.sh \
+	&& ./configure  --prefix=/usr/local/gdal-3.4.3 --with-proj=/usr/local/proj-8.2.1 \
+	&& make \
+	&& make install
+#3.install other deps
+RUN ${PACKAGER} config-manager --set-enabled powertools \
+	&& ${PACKAGER} install -y which libtool libxml2-devel geos-devel protobuf-c-devel 
+ADD build/postgres-gis/postgis-3.2.5.tar.gz /
+RUN cd postgis-3.2.5 \
+	&& sh autogen.sh \
+	&& ./configure  --with-projdir=/usr/local/proj-8.2.1 --with-gdalconfig=/usr/local/gdal-3.4.3/bin/gdal-config \
+	&& make \
+	&& make install
+
+FROM ${PREFIX}/highgo-postgres-gis-base:${BASEOS}-${PG_FULL}-${BASEVER}
+ARG BASEOS
+ARG DFSET
+ARG PACKAGER
+ARG PG_MAJOR
+ARG POSTGIS_LBL
+ARG POSTGIS_FULL_VER
+
+LABEL name="postgres-gis" \
+        summary="Includes PostGIS extensions on top of highgo-ivory" \
+        description="An identical image of highgo-ivory with the extra PostGIS packages added for users that require PostGIS." \
+        io.k8s.description="postgres-gis container" \
+        io.k8s.display-name="Highgo PostGIS" \
+        io.openshift.tags="postgresql,postgres,postgis,spatial,geospatial,gis,map,database,ha,highgo,ivory,ivorysql"
+
+USER 0
+RUN  ${PACKAGER} install -y libxml2 json-c geos protobuf protobuf-c libtiff 
+COPY --from=step1 /usr/local/proj-8.2.1/lib /usr/local/proj-8.2.1/lib
+COPY --from=step1 /usr/local/gdal-3.4.3/lib /usr/local/gdal-3.4.3/lib
+COPY --from=step1 /usr/local/ivorysql/ivorysql-2 /usr/local/ivorysql/ivorysql-2
+
+RUN sed -i '$a\/usr/local/proj-8.2.1/lib' /etc/ld.so.conf \
+	&& sed -i '$a\/usr/local/gdal-3.4.3/lib' /etc/ld.so.conf \
+	&& ldconfig -v
+
+EXPOSE 5432 5866
 
 ADD bin/postgres-gis /opt/crunchy/bin/postgres
 
 ENTRYPOINT ["/opt/crunchy/bin/uid_postgres.sh"]
 
-USER 26
+#USER 26
+USER 998
 
 CMD ["/opt/crunchy/bin/start.sh"]
