@@ -137,6 +137,14 @@ RUN pip3 install --upgrade python-dateutil \
 
 ENV PATH="${IVYROOT}/bin:${PATH}"
 
+# install timescaledb
+ADD rpms/timescaledb-2.11.1.tar.gz /
+RUN cd timescaledb-2.11.1 \
+        && ./bootstrap \
+        && cd build \
+        && make PG_CONFIG=$IVYROOT/bin/pg_config \
+        && make install PG_CONFIG=$IVYROOT/bin/pg_config
+
 LABEL name="ivory" \
 	summary="Highgo IvorySQL" \
 	description="Ivory ready for production: high availability, disaster recovery, monitoring, security, and performance. Works with IVYO, the open source Ivory Operator from Highgo." \
