@@ -162,6 +162,15 @@ RUN chown -R ivorysql:ivorysql /opt/crunchy /var/lib/pgsql \
 	chmod -R g=u /opt/crunchy /var/lib/pgsql \
 		/pgdata /pgwal /pgconf /backrestrepo
 
+# install wal2json
+ADD rpms/wal2json_2_5.tar.gz /
+RUN cd wal2json-wal2json_2_5 \
+    && export PATH=$IVYROOT/bin:$PATH \
+    && make \
+    && make install \
+    && make test \
+    && rm -rf ../wal2json-wal2json_2_5
+
 # open up the postgres port
 EXPOSE 5432 5866
 
@@ -170,6 +179,12 @@ ADD bin/common /opt/crunchy/bin
 ADD conf/postgres_common /opt/crunchy/conf
 ADD tools/pgmonitor/postgres_exporter/common /opt/crunchy/bin/modules/pgexporter
 ADD tools/pgmonitor/postgres_exporter/linux /opt/crunchy/bin/modules/pgexporter
+
+# install pgnodemx
+ADD rpms/pgnodemx-1.5.tar.gz /
+RUN cd pgnodemx-1.5 \
+    && make USE_PGXS=1 \
+    && make USE_PGXS=1 install
 
 RUN mkdir /.ssh && chown 998:0 /.ssh && chmod g+rwx /.ssh && rm -f /run/nologin
 
