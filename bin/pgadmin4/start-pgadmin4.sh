@@ -59,7 +59,7 @@ sed -i "s|\"pg\":.*|\"pg\": \"/usr/pgsql-${PGVERSION?}/bin\",|g" /var/lib/pgadmi
 
 echo_info "cd into pgadmin4-web"
 
-cd /usr/local/python3/lib/python3.9/site-packages/pgadmin4-web
+cd /usr/lib/python3.9/site-packages/pgadmin4-web
 
 if [[ ! -f /var/lib/pgadmin/pgadmin4.db ]]
 then
@@ -68,7 +68,7 @@ then
     err_check "$?" "pgAdmin4 Database Setup" "Could not create pgAdmin4 database: \n$(cat /tmp/pgadmin4.stderr)"
 fi
 
-cd /usr/local/python3/lib/python3.9/site-packages/pgadmin4-web
+cd /usr/lib/python3.9/site-packages/pgadmin4-web
 
 echo_info "Starting Apache web server.."
 
