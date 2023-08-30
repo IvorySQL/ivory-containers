@@ -48,13 +48,17 @@ endif
 # Allows consolidation of ubi/rhel Dockerfile sets
 ifeq ("$(CCP_BASEOS)", "ubi8")
         DFSET=rhel
-        PACKAGER=microdnf
-        BASE_IMAGE_OS=ubi8-minimal
+	ifeq ("$(BASE_IMAGE_OS)", "ubi8")	
+		PACKAGER=dnf
+	endif
+	ifeq ("$(BASE_IMAGE_OS)", "ubi8-minimal")
+                PACKAGER=microdnf
+        endif
 endif
 
 ifeq ("$(CCP_BASEOS)", "centos7")
         DFSET=centos
-        PACKAGER=dnf
+        PACKAGER=yum
         DOCKERBASEREGISTRY=docker.io/centos:
 endif
 
@@ -116,7 +120,7 @@ ccbase-image-build: build-pgbackrest license $(CCPROOT)/build/base/Dockerfile
 	$(IMGCMDSTEM) \
 		--network=host \
 		-f $(CCPROOT)/build/base/Dockerfile \
-		-t highgo-base:$(CCP_IMAGE_TAG) \
+		-t $(CCP_IMAGE_PREFIX)/highgo-base:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg RELVER=$(CCP_VERSION) \
 		--build-arg DFSET=$(DFSET) \
@@ -157,10 +161,10 @@ ccbase-ext-image-docker: ccbase-ext-image-build
 
 # ----- Special case pg-based image (postgres) -----
 # Special case args: BACKREST_VER
-postgres-pgimg-build: ccbase-image $(CCPROOT)/build/ivory/Dockerfile
+postgres-pgimg-build: ccbase-image $(CCPROOT)/build/ivory/Dockerfile_multi 
 	$(IMGCMDSTEM) \
 		--network=host \
-		-f $(CCPROOT)/build/ivory/Dockerfile \
+		-f $(CCPROOT)/build/ivory/Dockerfile_multi \
 		-t $(CCP_IMAGE_PREFIX)/highgo-ivory:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg BASEVER=$(CCP_VERSION) \
@@ -189,7 +193,7 @@ postgres-pgimg-docker: postgres-pgimg-build
 postgres-gis-base-pgimg-build: ccbase-ext-image-build $(CCPROOT)/build/postgres/Dockerfile
 	$(IMGCMDSTEM) \
 		--network=host \
-		-f $(CCPROOT)/build/ivory/Dockerfile \
+		-f $(CCPROOT)/build/ivory/Dockerfile_multi \
 		-t $(CCP_IMAGE_PREFIX)/highgo-postgres-gis-base:$(CCP_IMAGE_TAG) \
 		--build-arg BASEOS=$(CCP_BASEOS) \
 		--build-arg BASEVER=$(CCP_VERSION) \

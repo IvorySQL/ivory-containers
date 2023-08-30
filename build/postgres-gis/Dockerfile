@@ -50,8 +50,9 @@ USER 0
 #		--enablerepo="epel" \
 #		--enablerepo="codeready-builder-for-rhel-8-x86_64-rpms" ; \
 #fi
-
-# open up the postgres port
+RUN if [ "$BASEOS" = "ubi8" ] ; then \
+	${PACKAGER} -y install gcc gcc-c++; \
+fi
 
 #build postgis from source
 #1.install proj
@@ -78,12 +79,51 @@ RUN cd /gdal-3.4.3 \
 	&& make \
 	&& make install
 #3.install other deps
-RUN ${PACKAGER} config-manager --set-enabled powertools \
-	&& ${PACKAGER} install -y which libtool libxml2-devel geos-devel protobuf-c-devel 
+RUN if [ "$BASEOS" = "centos8" ] ; then \
+	${PACKAGER} config-manager --set-enabled powertools \
+	&& ${PACKAGER} install -y which libtool libxml2-devel geos-devel protobuf-c-devel ; \
+fi
+
+ADD build/postgres-gis/geos-3.9.2.tar.bz2 /
+ADD build/postgres-gis/protobuf-c-1.4.1.tar.gz /
+ADD build/postgres-gis/protobuf-3.20.1.tar.gz /
+RUN if [ "$BASEOS" = "ubi8" ] ; then \
+	cd geos-3.9.2 \
+	&& ./configure --prefix=/usr/local/geos-3.9.2 \
+	&& make && make install; \
+fi
+RUN if [ "$BASEOS" = "ubi8" ] ; then \
+	${PACKAGER} -y install libtool \
+        && cd /protobuf-3.20.1 \
+        && sh autogen.sh \
+        && ./configure  --prefix=/usr/local/protobuf-3.20.1 \
+        && make && make install \
+        && export PROTOBUF_HOME=/usr/local/protobuf-3.20.1 \
+        && export PATH=$PROTOBUF_HOME/bin:$PATH \
+        && export PKG_CONFIG_PATH=$PROTOBUF_HOME/lib/pkgconfig:$PKG_CONFIG_PATH; \
+fi
+RUN if [ "$BASEOS" = "ubi8" ] ; then \
+        cd /protobuf-c-1.4.1 \
+        && export PROTOBUF_HOME=/usr/local/protobuf-3.20.1 \
+        && export PATH=$PROTOBUF_HOME/bin:$PATH \
+        && export PKG_CONFIG_PATH=$PROTOBUF_HOME/lib/pkgconfig:$PKG_CONFIG_PATH \
+        && ./configure --prefix=/usr/local/protobuf-c-1.4.1 \
+        && make && make install \
+        && export PROTOBUFC_HOME=/usr/local/protobuf-c-1.4.1 \
+        && export PATH=$PROTOBUF_HOME/bin:$PROTOBUFC_HOME/bin:$PATH \
+        && export PKG_CONFIG_PATH=$PROTOBUFC_HOME/lib:$PKG_CONFIG_PATH; \
+fi
+RUN if [ "$BASEOS" = "ubi8" ] ; then \
+	${PACKAGER} -y install which libtool libxml2-devel redhat-rpm-config clang llvm; \
+fi
+
 ADD build/postgres-gis/postgis-3.2.5.tar.gz /
 RUN cd postgis-3.2.5 \
+        && export PROTOBUFC_HOME=/usr/local/protobuf-c-1.4.1 \
+        && export PATH=$PROTOBUF_HOME/bin:$PROTOBUFC_HOME/bin:$PATH \
+        && export PKG_CONFIG_PATH=$PROTOBUFC_HOME/lib:$PKG_CONFIG_PATH \
 	&& sh autogen.sh \
-	&& ./configure  --with-projdir=/usr/local/proj-8.2.1 --with-gdalconfig=/usr/local/gdal-3.4.3/bin/gdal-config \
+	&& ./configure  --with-geosconfig=/usr/local/geos-3.9.2/bin/geos-config --with-projdir=/usr/local/proj-8.2.1 --with-gdalconfig=/usr/local/gdal-3.4.3/bin/gdal-config --with-protobufdir=/usr/local/protobuf-c-1.4.1 \
 	&& make \
 	&& make install
 
@@ -103,7 +143,9 @@ LABEL name="postgres-gis" \
         io.openshift.tags="postgresql,postgres,postgis,spatial,geospatial,gis,map,database,ha,highgo,ivory,ivorysql"
 
 USER 0
-RUN  ${PACKAGER} install -y libxml2 json-c geos protobuf protobuf-c libtiff 
+RUN if [ "$BASEOS" = "centos8" ] ; then \
+	${PACKAGER} install -y libxml2 json-c geos protobuf protobuf-c libtiff ; \
+fi
 COPY --from=step1 /usr/local/proj-8.2.1/lib /usr/local/proj-8.2.1/lib
 COPY --from=step1 /usr/local/gdal-3.4.3/lib /usr/local/gdal-3.4.3/lib
 COPY --from=step1 /usr/local/ivorysql/ivorysql-2 /usr/local/ivorysql/ivorysql-2
@@ -112,6 +154,7 @@ RUN sed -i '$a\/usr/local/proj-8.2.1/lib' /etc/ld.so.conf \
 	&& sed -i '$a\/usr/local/gdal-3.4.3/lib' /etc/ld.so.conf \
 	&& ldconfig -v
 
+# open up the postgres port
 EXPOSE 5432 5866
 
 ADD bin/postgres-gis /opt/crunchy/bin/postgres

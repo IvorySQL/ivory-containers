@@ -41,13 +41,12 @@ ENV LC_ALL en_US.utf-8
 ENV LANG en_US.utf-8
 
 ARG EPEL8_RPM=https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-ARG EPEL7_RPM=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-RUN sed -e "s|^mirrorlist=|#mirrorlist=|g" \
-         -e "s|^#baseurl=http://mirror.centos.org/\$contentdir/\$releasever|baseurl=http://mirrors.tuna.tsinghua.edu.cn/centos-vault/8.4.2105|g" \
-         -i.bak \
-         /etc/yum.repos.d/CentOS-*.repo \
-	&& yum makecache
+#RUN sed -e "s|^mirrorlist=|#mirrorlist=|g" \
+#         -e "s|^#baseurl=http://mirror.centos.org/\$contentdir/\$releasever|baseurl=http://mirrors.tuna.tsinghua.edu.cn/centos-vault/8.4.2105|g" \
+#         -i.bak \
+#         /etc/yum.repos.d/CentOS-*.repo \
+#	&& yum makecache
 
 RUN if [ "$BASEOS" = "ubi8" ] ; then \
         rpm -ivh ${EPEL8_RPM} \
@@ -64,20 +63,13 @@ RUN if [ "$BASEOS" = "ubi8" ] ; then \
         && ${PACKAGER} -y clean all ; \
 fi
 
-RUN if [ "$BASEOS" = "centos7" ] ; then \
-        ${PACKAGER} -y update \
-        && ${PACKAGER} -y install \
-                epel-release \
-                --setopt=skip_missing_names_on_install=False \
-#                glibc-langpack-en \
-                bind-utils \
-                gettext \
-                hostname \
-                procps-ng \
-                nss_wrapper \
-        && ${PACKAGER} -y clean all ; \
+RUN if [ "$BASEOS" = "centos8" ] ; then \
+	sed -e "s|^mirrorlist=|#mirrorlist=|g" \
+	-e "s|^#baseurl=http://mirror.centos.org/\$contentdir/\$releasever|baseurl=http://mirrors.tuna.tsinghua.edu.cn/centos-vault/8.4.2105|g" \
+	-i.bak \
+	/etc/yum.repos.d/CentOS-*.repo \
+	&& yum makecache ; \
 fi
-
 RUN if [ "$BASEOS" = "centos8" ] ; then \
 	${PACKAGER} -y update --nodocs \
 	&& ${PACKAGER} -y install \
@@ -93,9 +85,6 @@ RUN if [ "$BASEOS" = "centos8" ] ; then \
 	&& ${PACKAGER} -y clean all ; \
 fi
 
-#ADD rpms/nss_wrapper-1.1.3-1.el7.x86_64.rpm /
-#RUN rpm -ivh nss_wrapper-1.1.3-1.el7.x86_64.rpm \
-#        && rm -f nss_wrapper-1.1.3-1.el7.x86_64.rpm
 # Add IvorySQL yum repository
 ADD rpms/ivorysql_repo.rpm /
 
@@ -103,10 +92,6 @@ ADD rpms/ivorysql_repo.rpm /
 # Install repos
 RUN rpm -ivh ivorysql_repo.rpm \
 	&& rm -f ivorysql_repo.rpm
-
-RUN if [ "$BASEOS" = "centos7" ] ; then \
-        ${PACKAGER} -qy module disable postgresql ; \
-fi
 
 RUN if [ "$BASEOS" = "centos8" ] ; then \
 	${PACKAGER} -qy module disable postgresql ; \

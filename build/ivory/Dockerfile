@@ -3,8 +3,8 @@ ARG BASEVER
 ARG PG_FULL
 ARG PREFIX
 ARG BASE_IMAGE_NAME
-#FROM ${BASE_IMAGE_NAME}:${BASEOS}-${PG_FULL}-${BASEVER}
-FROM highgo-base:centos8-15.2-0.0.1-0
+FROM ${BASE_IMAGE_NAME}:${BASEOS}-${PG_FULL}-${BASEVER}
+#FROM highgo-base:centos8-15.2-0.0.1-0
 
 # For RHEL8 all arguments used in main code has to be specified after FROM
 ARG PG_FULL
@@ -66,35 +66,38 @@ RUN if [ "$DFSET" = "centos" ] ; then \
         	unzip \
         	bzip2 \
         	lz4 \
-			krb5-workstation \
-#			orafce_${PG_MAJOR//.} \
-#			passwordpolicy \
+		krb5-workstation \
+#		orafce_${PG_MAJOR//.} \
+#		passwordpolicy \
         && ${PACKAGER} -y clean all ; \
 else \
         ${PACKAGER} -y install \
-#		--enablerepo="epel" \
+		--enablerepo="epel" \
 		openssh-clients \
 		openssh-server \
 #		pgaudit${PG_MAJOR//.} \
 #		pgaudit${PG_MAJOR//.}_set_user \
-		pg_partman_${PG_MAJOR//.} \
-		pg_cron_${PG_MAJOR//.} \
-		pgbackrest \
+#		pg_partman_${PG_MAJOR//.} \
+#		pg_cron_${PG_MAJOR//.} \
+		pgbackrest-2.45 \
 #		postgresql${PG_MAJOR//.}-contrib \
 #		postgresql${PG_MAJOR//.}-server \
 #		postgresql${PG_MAJOR//.}-plpython* \
-                ivorysql2-${IVY_MAJOR//.}-contrib \
-                ivorysql2-${IVY_MAJOR//.}-server \
-                ivorysql2-${IVY_MAJOR//.}-plpython* \
-		pgnodemx${PG_MAJOR//.} \
-		$( printf '11\n'${PG_MAJOR} | sort -VC && echo postgresql${PG_MAJOR}-llvmjit ) \
+#                ivorysql2-devel \
+                ivorysql2-contrib \
+                ivorysql2-server \
+                ivorysql2-plpython3 \
+		ivorysql2-pltcl \
+		ivorysql2-plperl \
+#		pgnodemx${PG_MAJOR//.} \
+#		$( printf '11\n'${PG_MAJOR} | sort -VC && echo postgresql${PG_MAJOR}-llvmjit ) \
 		psmisc \
 		python3-pip \
 		python3-psutil \
 		python3-psycopg2 \
 		rsync \
-		timescaledb_${PG_MAJOR//.} \
-		wal2json_${PG_MAJOR//.} \
+#		timescaledb_${PG_MAJOR//.} \
+#		wal2json_${PG_MAJOR//.} \
 		file \
 		unzip \
 		tar \
@@ -102,12 +105,13 @@ else \
 		lz4 \
 		krb5-workstation \
 #		orafce_${PG_MAJOR//.} \
-		passwordpolicy \
-	&& ${PACKAGER} -y install --nodocs \
-		--setopt=tsflags='' \
-		--enablerepo="epel" \
-		pgaudit_analyze \
-	&& ${PACKAGER} -y clean all --enablerepo="epel" ; \
+#		passwordpolicy \
+#	&& ${PACKAGER} -y install --nodocs \
+#		--setopt=tsflags='' \
+#		--enablerepo="epel" \
+#		pgaudit_analyze \
+#	&& ${PACKAGER} -y clean all --enablerepo="epel" ; \
+	&& ${PACKAGER} -y clean all ; \ 
 fi
 
 RUN cat /dev/null > /etc/pgbackrest.conf
@@ -124,12 +128,12 @@ RUN cd pgaudit-1.7.0 \
 	&& rm -rf ../pgaudit-1.7.0
 # insatll pg_cron
 #RUN yum install -y pg_cron_15 --installroot=$IVYROOT  --releasever=8 --skip-broken
-ADD rpms/pg_cron-v1.5.2.tar.gz /
-RUN cd pg_cron-1.5.2 \
-	&& sed -i 's/-Wno-compound-token-split-by-macro //g' $IVYROOT/lib/pgxs/src/Makefile.global \
+ADD rpms/pg_cron-main.tar.gz /
+RUN cd pg_cron-main \
+#	&& sed -i 's/-Wno-compound-token-split-by-macro //g' $IVYROOT/lib/pgxs/src/Makefile.global \
         && make USE_PGXS=1 PG_CONFIG=$IVYROOT/bin/pg_config \
         && make install USE_PGXS=1 PG_CONFIG=$IVYROOT/bin/pg_config \
-	&& rm -rf ../pg_cron-1.5.2
+	&& rm -rf ../pg_cron-main/
 
 # install patroni for Kube
 RUN pip3 install --upgrade python-dateutil \
@@ -168,7 +172,6 @@ RUN cd wal2json-wal2json_2_5 \
     && export PATH=$IVYROOT/bin:$PATH \
     && make \
     && make install \
-    && make test \
     && rm -rf ../wal2json-wal2json_2_5
 
 # open up the postgres port
