@@ -144,10 +144,21 @@ LABEL name="postgres-gis" \
 
 USER 0
 RUN if [ "$BASEOS" = "centos8" ] ; then \
-	${PACKAGER} install -y libxml2 json-c geos protobuf protobuf-c libtiff ; \
+	${PACKAGER} install -y libxml2 json-c geos protobuf protobuf-c libtiff  && ${PACKAGER} -y clean all ; \
 fi
-COPY --from=step1 /usr/local/proj-8.2.1/lib /usr/local/proj-8.2.1/lib
-COPY --from=step1 /usr/local/gdal-3.4.3/lib /usr/local/gdal-3.4.3/lib
+RUN if [ "$BASEOS" = "ubi8" ] ; then \
+        ${PACKAGER} install -y geos311 libtiff  && ${PACKAGER} -y clean all ; \
+fi
+RUN rm -rf /usr/local/ivorysql/ivorysql-2
+COPY --from=step1 /usr/local/proj-8.2.1/lib/*.so /usr/local/proj-8.2.1/lib/
+COPY --from=step1 /usr/local/gdal-3.4.3/lib/*.so /usr/local/gdal-3.4.3/lib/
+#COPY --from=step1 /usr/local/ivorysql/ivorysql-2/bin/pgsql2shp /usr/local/ivorysql/ivorysql-2/bin/pgsql2shp 
+#COPY --from=step1 /usr/local/ivorysql/ivorysql-2/bin/raster2pgsql /usr/local/ivorysql/ivorysql-2/bin/raster2pgsql 
+#COPY --from=step1 /usr/local/ivorysql/ivorysql-2/bin/shp2pgsql /usr/local/ivorysql/ivorysql-2/bin/shp2pgsql 
+#COPY --from=step1 /usr/local/ivorysql/ivorysql-2/lib/bitcode /usr/local/ivorysql/ivorysql-2/lib/bitcode
+#COPY --from=step1 /usr/local/ivorysql/ivorysql-2/lib/postgis* /usr/local/ivorysql/ivorysql-2/lib/
+#COPY --from=step1 /usr/local/ivorysql/ivorysql-2/share/extension/postgis* /usr/local/ivorysql/ivorysql-2/share/extension/
+#COPY --from=step1 /usr/local/ivorysql/ivorysql-2/share/contrib/postgis-3.2 /usr/local/ivorysql/ivorysql-2/share/contrib/postgis-3.2
 COPY --from=step1 /usr/local/ivorysql/ivorysql-2 /usr/local/ivorysql/ivorysql-2
 
 RUN sed -i '$a\/usr/local/proj-8.2.1/lib' /etc/ld.so.conf \
@@ -155,7 +166,7 @@ RUN sed -i '$a\/usr/local/proj-8.2.1/lib' /etc/ld.so.conf \
 	&& ldconfig -v
 
 # open up the postgres port
-EXPOSE 5432 5866
+EXPOSE 5432 5866 5333
 
 ADD bin/postgres-gis /opt/crunchy/bin/postgres
 

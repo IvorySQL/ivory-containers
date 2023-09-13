@@ -31,13 +31,19 @@ RUN  ${PACKAGER} -y install \
         openssl-devel \
         make \
         && ${PACKAGER} -y clean all
-RUN dnf install -y libxslt
-ADD resource/*.rpm /
+RUN dnf install -y libxslt tcl
+RUN dnf install -y ivorysql2-server-2.3 \
+	ivorysql2-contrib-2.3 \
+	ivorysql2-plperl-2.3 \
+	ivorysql2-plpython3-2.3 \
+	ivorysql2-pltcl-2.3
+ 
+#ADD resource/*.rpm /
 #RUN rpm -ivh ivorysql2-libs-2.3-1.rhel8.x86_64.rpm \
 #	&& rpm -ivh ivorysql2-2.3-1.rhel8.x86_64.rpm \
-RUN rpm -ivh ivorysql2-server-2.3-1.rhel8.x86_64.rpm --nodeps \
-        && rpm -ivh ivorysql2-contrib-2.3-1.rhel8.x86_64.rpm 
-#        && rpm -ivh ivorysql2-devel-2.3-1.rhel8.x86_64.rpm \
+#RUN rpm -ivh ivorysql2-server-2.3-1.rhel8.x86_64.rpm --nodeps \
+#	&& rpm -ivh ivorysql2-contrib-2.3-1.rhel8.x86_64.rpm \
+#	&& rpm -ivh ivorysql2-devel-2.3-1.rhel8.x86_64.rpm \
 #	&& rpm -ivh ivorysql2-plperl-2.3-1.rhel8.x86_64.rpm \
 #	&& rpm -ivh ivorysql2-plpython3-2.3-1.rhel8.x86_64.rpm \
 #	&& rpm -ivh ivorysql2-pltcl-2.3-1.rhel8.x86_64.rpm
@@ -106,6 +112,7 @@ RUN ${PACKAGER} -y install \
                 --enablerepo="epel" \
                 libicu \
                 libxslt \
+		tcl \
                 openssh-clients \
                 openssh-server \
                 pgbackrest-2.45 \
@@ -127,7 +134,7 @@ RUN cat /dev/null > /etc/pgbackrest.conf
 COPY --from=step1 /usr/local/ivorysql /usr/local/ivorysql/
 
 # install patroni for Kube
-RUN pip3 install --upgrade python-dateutil \
+RUN pip3 install --upgrade python-dateutil -i https://pypi.douban.com/simple/ \
         && pip3 install patroni[kubernetes]=="${PATRONI_VER}" -i https://pypi.douban.com/simple/
 
 ENV PATH="${IVYROOT}/bin:${PATH}"
