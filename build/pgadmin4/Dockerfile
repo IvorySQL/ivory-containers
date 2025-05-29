@@ -1,7 +1,7 @@
 #***************************************************
 # Create env builder
 #***************************************************
-FROM docker.io/centos:centos8 as pg16-builder
+FROM docker.io/centos:centos8 as pg17-builder
 # For RHEL8 all arguments used in main code has to be specified after FROM
 ARG PACKAGER
 ARG PG_MAJOR
@@ -38,7 +38,7 @@ RUN mkdir -p /var/lib/pgadmin
 RUN rpm -i https://ftp.postgresql.org/pub/pgadmin/pgadmin4/yum/pgadmin4-redhat-repo-2-1.noarch.rpm 
 RUN ${PACKAGER} -y install --nodocs \
                 --setopt=skip_missing_names_on_install=False \
-                --setopt=obsoletes=0 pgadmin4-web-8.0
+                --setopt=obsoletes=0 pgadmin4-web-8.14
 
 RUN cp -rf /usr/pgadmin4/venv/lib/python3.9/site-packages/* /usr/lib/python3.9/site-packages/ \
     && cp -rp /usr/pgadmin4/web /usr/lib/python3.9/site-packages/pgadmin4-web
@@ -51,19 +51,19 @@ FROM redhat/ubi8:latest
 ARG PACKAGER
 ARG PG_MAJOR
 
-COPY --from=pg16-builder /usr/pgsql-${PG_MAJOR}/bin/pg_dump /usr/bin/pg_dump
-COPY --from=pg16-builder /usr/pgsql-${PG_MAJOR}/bin/pg_dumpall /usr/bin/pg_dumpall
-COPY --from=pg16-builder /usr/pgsql-${PG_MAJOR}/bin/pg_restore /usr/bin/pg_restore
-COPY --from=pg16-builder /usr/pgsql-${PG_MAJOR}/bin/psql /usr/bin/psql
-COPY --from=pg16-builder /usr/lib64/libpq.so.5.13 /usr/lib64
+COPY --from=pg17-builder /usr/pgsql-${PG_MAJOR}/bin/pg_dump /usr/bin/pg_dump
+COPY --from=pg17-builder /usr/pgsql-${PG_MAJOR}/bin/pg_dumpall /usr/bin/pg_dumpall
+COPY --from=pg17-builder /usr/pgsql-${PG_MAJOR}/bin/pg_restore /usr/bin/pg_restore
+COPY --from=pg17-builder /usr/pgsql-${PG_MAJOR}/bin/psql /usr/bin/psql
+COPY --from=pg17-builder /usr/lib64/libpq.so.5.13 /usr/lib64
 
-COPY --from=pg16-builder /usr/lib/python3.9 /usr/lib/python3.9
-COPY --from=pg16-builder /usr/bin/python3.9 /usr/bin/python3.9
-COPY --from=pg16-builder /usr/bin/pip3.9 /usr/bin/pip3.9
-COPY --from=pg16-builder /usr/lib64/libpython3.9.so.1.0 /usr/lib64/
-COPY --from=pg16-builder /usr/lib64/python3.9 /usr/lib64/python3.9
-COPY --from=pg16-builder /var/lib/pgadmin/ /var/lib/pgadmin/
-COPY --from=pg16-builder /etc/httpd/modules/mod_wsgi_python3.so /
+COPY --from=pg17-builder /usr/lib/python3.9 /usr/lib/python3.9
+COPY --from=pg17-builder /usr/bin/python3.9 /usr/bin/python3.9
+COPY --from=pg17-builder /usr/bin/pip3.9 /usr/bin/pip3.9
+COPY --from=pg17-builder /usr/lib64/libpython3.9.so.1.0 /usr/lib64/
+COPY --from=pg17-builder /usr/lib64/python3.9 /usr/lib64/python3.9
+COPY --from=pg17-builder /var/lib/pgadmin/ /var/lib/pgadmin/
+COPY --from=pg17-builder /etc/httpd/modules/mod_wsgi_python3.so /
 
 LABEL name="pgadmin4" \
         summary="pgAdmin4 GUI utility" \
@@ -89,6 +89,9 @@ RUN sed -i 's/config.CONFIG_DATABASE_CONNECTION_POOL_SIZE/5/g' /usr/lib/python3.
     sed -i 's/config.CONFIG_DATABASE_CONNECTION_MAX_OVERFLOW/100/g' /usr/lib/python3.9/site-packages/pgadmin4-web/pgadmin/model/__init__.py && \
     sed -i 's/import config//g' /usr/lib/python3.9/site-packages/pgadmin4-web/pgadmin/model/__init__.py
 
+RUN sed -i 's/config.SHARED_STORAGE/[]/g' /usr/lib/python3.9/site-packages/pgadmin4-web/pgadmin/utils/__init__.py && \
+    sed -i "s|config.STORAGE_DIR|'/var/lib/pgadmin/storage'|g" /usr/lib/python3.9/site-packages/pgadmin4-web/pgadmin/utils/__init__.py && \
+    sed -i 's/import config//g' /usr/lib/python3.9/site-packages/pgadmin4-web/pgadmin/utils/__init__.py
 
 RUN ${PACKAGER} -y install --nodocs \
                 mod_ssl \
