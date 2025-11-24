@@ -5,7 +5,6 @@ ARG PREFIX
 ARG BASE_IMAGE_NAME
 ARG IVYO_VER
 FROM ${BASE_IMAGE_NAME}:${BASEOS}-${PG_FULL}-${IVYO_VER}-${BASEVER}
-#FROM highgo-base:centos8-15.2-0.0.1-0
 
 # For RHEL8 all arguments used in main code has to be specified after FROM
 ARG PG_FULL

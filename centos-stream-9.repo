@@ -1,0 +1,11 @@
+[centos-stream-9-baseos]
+name=CentOS Stream 9 BaseOS - AliYun
+baseurl=https://mirrors.aliyun.com/centos-stream/9-stream/BaseOS/x86_64/os/
+gpgcheck=0
+enabled=1
+
+[centos-stream-9-appstream]
+name=CentOS Stream 9 AppStream - AliYun
+baseurl=https://mirrors.aliyun.com/centos-stream/9-stream/AppStream/x86_64/os/
+gpgcheck=0
+enabled=1

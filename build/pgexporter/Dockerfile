@@ -1,4 +1,4 @@
-FROM redhat/ubi8:latest
+FROM redhat/ubi9:latest
 
 ARG PG_MAJOR
 
