@@ -2,7 +2,7 @@ FROM redhat/ubi9:latest
 
 ARG PG_MAJOR
 
-RUN yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+RUN yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
 
 RUN yum install -y gettext \
         && yum -y clean all
@@ -22,6 +22,7 @@ RUN chgrp -R 0 /opt/cpm/bin /opt/cpm/conf && \
         chmod -R g=u /opt/cpm/bin/ opt/cpm/conf
 
 RUN chmod +x /opt/cpm/bin/start.sh
+RUN chmod a+x /opt/cpm/bin/postgres_exporter/postgres_exporter
 
 EXPOSE 9187
 
