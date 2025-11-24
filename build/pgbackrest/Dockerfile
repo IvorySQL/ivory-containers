@@ -23,7 +23,7 @@ LABEL name="pgbackrest" \
 	io.openshift.tags="postgresql,postgres,pgbackrest,backup,database,crunchy"
 
 # Run postgres install in separate transaction ahead of backrest for postgres user
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
 	${PACKAGER} -y install --nodocs --enablerepo="epel" \
 		openssh-clients \
 		openssh-server \

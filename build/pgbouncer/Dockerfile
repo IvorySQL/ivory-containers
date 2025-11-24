@@ -1,4 +1,4 @@
-FROM redhat/ubi8:latest
+FROM redhat/ubi9:latest
 
 # For RHEL8 all arguments used in main code has to be specified after FROM
 ARG PACKAGER

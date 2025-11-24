@@ -21,14 +21,14 @@ COPY redhat/atomic/help.md /help.md
 COPY licenses /licenses
 
 # Have to install glibc-langpack-en on UBI8 otherwise en_US.utf-8 does not exist
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
         ${PACKAGER} -y update --nodocs \
         && ${PACKAGER} -y install --nodocs \
                 glibc-langpack-en ; \
 fi
 
 # Temporary HACK to disable postgres module
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
         echo "[postgresql]"  >> /etc/dnf/modules.d/postgresql.module \
         && echo "name=postgresql"  >> /etc/dnf/modules.d/postgresql.module \
         && echo "stream=10"  >> /etc/dnf/modules.d/postgresql.module \
@@ -39,9 +39,9 @@ fi
 ENV LC_ALL en_US.utf-8
 ENV LANG en_US.utf-8
 
-ARG EPEL8_RPM=https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+ARG EPEL8_RPM=https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
         rpm -ivh ${EPEL8_RPM} \
         && ${PACKAGER} -y install --nodocs \
                 bind-utils \
@@ -57,8 +57,8 @@ RUN if [ "$BASEOS" = "ubi8" ] ; then \
 fi
 
 # Add IvorySQL yum repository
-RUN echo "[ivorysql4]"  >> /etc/yum.repos.d/ivorysql.repo \
-        && echo "name=IvorySQL Server 4 \$releasever - \$basearch"  >> /etc/yum.repos.d/ivorysql.repo \
-        && echo "baseurl=https://yum.highgo.com/dists/ivorysql-rpms/4/redhat/rhel-\$releasever-\$basearch"  >> /etc/yum.repos.d/ivorysql.repo \
-        && echo "enabled=1"  >> /etc/yum.repos.d/ivorysql.repo \
-        && echo "gpgcheck=0"  >> /etc/yum.repos.d/ivorysql.repo;
+#RUN echo "[ivorysql5]"  >> /etc/yum.repos.d/ivorysql.repo \
+#        && echo "name=IvorySQL Server 5 \$releasever - \$basearch"  >> /etc/yum.repos.d/ivorysql.repo \
+#        && echo "baseurl=https://yum.highgo.com/dists/ivorysql-rpms/5/redhat/rhel-\$releasever-\$basearch"  >> /etc/yum.repos.d/ivorysql.repo \
+#        && echo "enabled=1"  >> /etc/yum.repos.d/ivorysql.repo \
+#        && echo "gpgcheck=0"  >> /etc/yum.repos.d/ivorysql.repo;

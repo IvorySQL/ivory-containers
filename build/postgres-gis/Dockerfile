@@ -19,7 +19,7 @@ LABEL name="postgres-gis" \
 
 USER 0
 
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
 	${PACKAGER} -y install gcc gcc-c++; \
 fi
 
@@ -57,17 +57,17 @@ ADD build/postgres-gis/geos-3.9.2.tar.bz2 /
 ADD build/postgres-gis/protobuf-c-1.4.1.tar.gz /
 ADD build/postgres-gis/protobuf-3.20.1.tar.gz /
 
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
 	${PACKAGER} install -y findutils; \
 fi
 
 
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
 	cd geos-3.9.2 \
-	&& ./configure --prefix=/usr/local/geos-3.9.2 --with-pgconfig=/usr/local/ivorysql/ivorysql-4/pg_config \
+	&& ./configure --prefix=/usr/local/geos-3.9.2 \
 	&& make && make install; \
 fi
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
 	${PACKAGER} -y install libtool \
         && cd /protobuf-3.20.1 \
         && sh autogen.sh \
@@ -77,7 +77,7 @@ RUN if [ "$BASEOS" = "ubi8" ] ; then \
         && export PATH=$PROTOBUF_HOME/bin:$PATH \
         && export PKG_CONFIG_PATH=$PROTOBUF_HOME/lib/pkgconfig:$PKG_CONFIG_PATH; \
 fi
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
         cd /protobuf-c-1.4.1 \
         && export PROTOBUF_HOME=/usr/local/protobuf-3.20.1 \
         && export PATH=$PROTOBUF_HOME/bin:$PATH \
@@ -88,15 +88,15 @@ RUN if [ "$BASEOS" = "ubi8" ] ; then \
         && export PATH=$PROTOBUF_HOME/bin:$PROTOBUFC_HOME/bin:$PATH \
         && export PKG_CONFIG_PATH=$PROTOBUFC_HOME/lib:$PKG_CONFIG_PATH; \
 fi
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
 	${PACKAGER} -y install which libtool libxml2-devel redhat-rpm-config clang llvm; \
 fi
 
-ENV LD_LIBRARY_PATH="/usr/lib64:/usr/local/geos-3.9.2/lib:/usr/local/ivorysql/ivorysql-4/lib:$LD_LIBRARY_PATH"
-RUN cp /usr/lib64/libstdc++.so.6 /usr/local/ivorysql/ivorysql-4/lib
+ENV LD_LIBRARY_PATH="/usr/lib64:/usr/local/geos-3.9.2/lib:/usr/local/ivorysql/ivorysql-5/lib:$LD_LIBRARY_PATH"
+RUN cp /usr/lib64/libstdc++.so.6 /usr/local/ivorysql/ivorysql-5/lib
 
-ADD build/postgres-gis/postgis-3.4.0.tar.gz /
-RUN cd postgis-3.4.0 \
+ADD build/postgres-gis/postgis-3.5.4.tar.gz /
+RUN cd postgis-3.5.4 \
         && export PROTOBUFC_HOME=/usr/local/protobuf-c-1.4.1 \
         && export PATH=$PROTOBUF_HOME/bin:$PROTOBUFC_HOME/bin:$PATH \
         && export PKG_CONFIG_PATH=$PROTOBUFC_HOME/lib:$PKG_CONFIG_PATH \
@@ -120,13 +120,38 @@ LABEL name="postgres-gis" \
         io.openshift.tags="postgresql,postgres,postgis,spatial,geospatial,gis,map,database,ha,highgo,ivory,ivorysql"
 
 USER 0
+
+RUN echo "[centos-stream-9-baseos]" > /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "name=CentOS Stream 9 BaseOS - AliYun" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "baseurl=https://mirrors.aliyun.com/centos-stream/9-stream/BaseOS/x86_64/os/" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "enabled=1" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "[centos-stream-9-appstream]" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "name=CentOS Stream 9 AppStream - AliYun" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "baseurl=https://mirrors.aliyun.com/centos-stream/9-stream/AppStream/x86_64/os/" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "enabled=1" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "[centos-stream-9-crb]" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "name=CentOS Stream 9 CRB - AliYun" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "baseurl=https://mirrors.aliyun.com/centos-stream/9-stream/CRB/x86_64/os/" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/centos-stream-9.repo && \
+    echo "enabled=1" >> /etc/yum.repos.d/centos-stream-9.repo
+
+RUN dnf install --disablerepo="pgdg*" -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm; \
+    dnf install --disablerepo="pgdg*" -y lz4 lz4-devel lz4-libs krb5-devel libxslt-devel libicu-devel; \
+    dnf install --disablerepo="pgdg*" -y e2fsprogs-devel libuuid-devel;\
+    dnf install --disablerepo="pgdg*" -y --enablerepo=*ower*ools uuid-devel;\
+    dnf -y clean all
+
 RUN if [ "$BASEOS" = "centos8" ] ; then \
 	${PACKAGER} install -y libxml2 json-c geos protobuf protobuf-c libtiff  && ${PACKAGER} -y clean all ; \
 fi
-RUN if [ "$BASEOS" = "ubi8" ] ; then \
+RUN if [ "$BASEOS" = "ubi9" ] ; then \
         ${PACKAGER} install -y geos311 libtiff  && ${PACKAGER} -y clean all ; \
 fi
-RUN rm -rf /usr/local/ivorysql/ivorysql-4
+RUN rm -rf /usr/local/ivorysql/ivorysql-5
 COPY --from=step1 /usr/local/proj-8.2.1/lib/*.so /usr/local/proj-8.2.1/lib/
 COPY --from=step1 /usr/local/gdal-3.4.3/lib/*.so /usr/local/gdal-3.4.3/lib/
 #COPY --from=step1 /usr/local/ivorysql/ivorysql-4/bin/pgsql2shp /usr/local/ivorysql/ivorysql-4/bin/pgsql2shp 
@@ -136,7 +161,7 @@ COPY --from=step1 /usr/local/gdal-3.4.3/lib/*.so /usr/local/gdal-3.4.3/lib/
 #COPY --from=step1 /usr/local/ivorysql/ivorysql-4/lib/postgis* /usr/local/ivorysql/ivorysql-4/lib/
 #COPY --from=step1 /usr/local/ivorysql/ivorysql-4/share/extension/postgis* /usr/local/ivorysql/ivorysql-4/share/extension/
 #COPY --from=step1 /usr/local/ivorysql/ivorysql-4/share/contrib/postgis-3.2 /usr/local/ivorysql/ivorysql-4/share/contrib/postgis-3.2
-COPY --from=step1 /usr/local/ivorysql/ivorysql-4 /usr/local/ivorysql/ivorysql-4
+COPY --from=step1 /usr/local/ivorysql/ivorysql-5 /usr/local/ivorysql/ivorysql-5
 
 RUN sed -i '$a\/usr/local/proj-8.2.1/lib' /etc/ld.so.conf \
 	&& sed -i '$a\/usr/local/gdal-3.4.3/lib' /etc/ld.so.conf \
