@@ -1,11 +1,11 @@
 FROM redhat/ubi9:latest
 
-# For RHEL8 all arguments used in main code has to be specified after FROM
+# For RHEL9 all arguments used in main code has to be specified after FROM
 ARG PACKAGER
 ARG PG_MAJOR
 ARG PGBOUNCER_VER
 
-RUN ${PACKAGER} -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
+RUN ${PACKAGER} -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
 	&& ${PACKAGER} -y makecache
 
 LABEL name="pgbouncer" \
@@ -15,10 +15,14 @@ LABEL name="pgbouncer" \
 	io.k8s.display-name="pgBouncer" \
 	io.openshift.tags="postgresql,postgres,pooling,pgbouncer,database,ivory,ivorysql"
 
-RUN ${PACKAGER} -y install --nodocs \
-	--disablerepo="epel" \
+RUN rpm -ivh https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/c-ares-1.19.1-2.el9.x86_64.rpm
+RUN ${PACKAGER} -y update && ${PACKAGER} -y install --nodocs \
+        --disablerepo="epel" \
 	pgbouncer-${PGBOUNCER_VER} \
 	&& ${PACKAGER} -y clean all
+
+#RUN rpm -ivh https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/c-ares-1.19.1-2.el9.x86_64.rpm
+#RUN rpm -ivh https://ftp.postgresql.org/pub/repos/yum/common/redhat/rhel-9-x86_64/pgbouncer-1.24.0-42PGDG.rhel9.x86_64.rpm
 
 # Preserving PGVERSION out of paranoia
 ENV PGVERSION="${PG_MAJOR}"
