@@ -1,24 +1,15 @@
 #***************************************************
 # Create env builder
 #***************************************************
-FROM docker.io/centos:centos8 as pg18-builder
+FROM redhat/ubi9:latest as pg18-builder
 # For RHEL8 all arguments used in main code has to be specified after FROM
 ARG PACKAGER
 ARG PG_MAJOR
-
-RUN sed -e "s|^mirrorlist=|#mirrorlist=|g" \
-	-e "s|^#baseurl=http://mirror.centos.org/\$contentdir/\$releasever|baseurl=http://mirrors.tuna.tsinghua.edu.cn/centos-vault/8.4.2105|g" \
-	-i.bak \
-	/etc/yum.repos.d/CentOS-*.repo \
-	&& yum makecache ;
-
-RUN ${PACKAGER} -qy module disable postgresql ;
 
 RUN ${PACKAGER} -y update --nodocs \
 	&& ${PACKAGER} -y install \
 		--setopt=skip_missing_names_on_install=False \
 		--nodocs \
-		epel-release \
 		glibc-langpack-en \
 		bind-utils \
 		gettext \
@@ -26,11 +17,13 @@ RUN ${PACKAGER} -y update --nodocs \
 		procps-ng \
 		nss_wrapper \
 	&& ${PACKAGER} -y clean all ;
+RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+    dnf -y install soci-postgresql-devel && \
+    dnf -y clean all
 
-RUN yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+RUN yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
 RUN yum -y install --nodocs \
                 --setopt=skip_missing_names_on_install=False \
-                soci-postgresql-devel \
                 postgresql${PG_MAJOR//.}-server
 
 RUN mkdir -p /var/lib/pgadmin
@@ -59,7 +52,7 @@ COPY --from=pg18-builder /usr/lib64/libpq.so.5.13 /usr/lib64
 
 COPY --from=pg18-builder /usr/lib/python3.9 /usr/lib/python3.9
 COPY --from=pg18-builder /usr/bin/python3.9 /usr/bin/python3.9
-COPY --from=pg18-builder /usr/bin/pip3.9 /usr/bin/pip3.9
+#COPY --from=pg18-builder /usr/bin/pip3 /usr/bin/pip3
 COPY --from=pg18-builder /usr/lib64/libpython3.9.so.1.0 /usr/lib64/
 COPY --from=pg18-builder /usr/lib64/python3.9 /usr/lib64/python3.9
 COPY --from=pg18-builder /var/lib/pgadmin/ /var/lib/pgadmin/
@@ -77,12 +70,6 @@ RUN ln -s libpq.so.5.13 /usr/lib64/libpq.so.5 && \
 
 RUN mkdir -p /opt/crunchy/bin /opt/crunchy/conf /var/log/pgadmin \
         /certs /run/httpd
-
-RUN sed -e "s|^mirrorlist=|#mirrorlist=|g" \
-         -e "s|^#baseurl=http://mirror.centos.org/\$contentdir/\$releasever|baseurl=http://mirrors.tuna.tsinghua.edu.cn/centos-vault/8.4.2105|g" \
-         -i.bak \
-         /etc/yum.repos.d/ubi.repo \
-	&& yum makecache
 
 # solve circle import for issue
 RUN sed -i 's/config.CONFIG_DATABASE_CONNECTION_POOL_SIZE/5/g' /usr/lib/python3.9/site-packages/pgadmin4-web/pgadmin/model/__init__.py && \
@@ -113,7 +100,7 @@ RUN chown -R 2:0 /usr/lib/python3.9/site-packages/pgadmin4-web \
         && ln -sf /var/lib/pgadmin/config_local.py /usr/lib/python3.9/site-packages/pgadmin4-web/config_local.py \
         && ln -sf /var/lib/pgadmin/pgadmin.conf /etc/httpd/conf.d/pgadmin.conf \
         && ln -sf /usr/bin/python3.9 /usr/bin/python3 \
-        && ln -sf /usr/bin/pip3.9 /usr/bin/pip3 \
+        # && ln -sf /usr/bin/pip3.9 /usr/bin/pip3 \
         && ln -sf /usr/bin/python3.9 /usr/bin/python
 
 # Preserving PGVERSION out of paranoia
